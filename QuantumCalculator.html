@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quantum Computing Advanced Simulator v4.0</title>
+    <style>
+        :root {
+            --primary: #00fff2;
+            --secondary: #ff00ff;
+            --accent: #0066ff;
+            --bg: #000716;
+            --success: #00ff66;
+            --warning: #ffbb00;
+            --error: #ff0033;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--primary);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        .quantum-container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            height: 100vh;
+            gap: 1px;
+            background: rgba(0,255,242,0.1);
+        }
+
+        .panel {
+            background: var(--bg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .left-panel {
+            border-right: 1px solid var(--primary);
+        }
+
+        .right-panel {
+            border-left: 1px solid var(--primary);
+        }
+
+        .main-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .quantum-btn {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0,255,242,0.1), transparent);
+            transform: rotate(45deg);
+            transition: 0.5s;
+        }
+
+        .quantum-btn:hover::after {
+            left: 100%;
+        }
+
+        .quantum-btn:hover {
+            background: rgba(0,255,242,0.1);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        .quantum-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .state-display {
+            font-family: monospace;
+            font-size: 18px;
+            padding: 15px;
+            border: 1px solid var(--primary);
+            background: rgba(0,0,0,0.3);
+            margin: 10px 0;
+        }
+
+        .history-log {
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid var(--primary);
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid rgba(0,255,242,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .log-entry:hover {
+            background: rgba(0,255,242,0.1);
+        }
+
+        .log-time {
+            color: var(--accent);
+            font-size: 10px;
+            min-width: 80px;
+        }
+
+        .log-operation {
+            color: var(--secondary);
+            flex-grow: 1;
+            margin: 0 10px;
+        }
+
+        .log-result {
+            color: var(--success);
+            min-width: 100px;
+            text-align: right;
+        }
+
+        .equation-box {
+            font-family: 'Times New Roman', serif;
+            font-size: 18px;
+            padding: 15px;
+            margin-top: 10px;
+            border: 1px solid var(--secondary);
+            background: rgba(0,0,0,0.4);
+            color: var(--secondary);
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .equation-title {
+            font-size: 14px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--primary);
+            padding-bottom: 5px;
+        }
+
+        .equation-content {
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .equation-step {
+            margin: 5px 0;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .measurement-result {
+            font-size: 24px;
+            color: var(--secondary);
+            text-align: center;
+            margin-top: 20px;
+            min-height: 40px;
+        }
+
+        .stats-container {
+            font-family: monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid var(--primary);
+            background: rgba(0,0,0,0.3);
+        }
+
+        .stats-item {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-clear-btn {
+            background: transparent;
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .history-clear-btn:hover {
+            background: var(--error);
+            color: var(--bg);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .pulse {
+            animation: pulse 0.5s ease;
+        }
+
+        canvas {
+            border: 1px solid var(--primary);
+            background: rgba(0,0,0,0.5);
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0,255,242,0.2);
+        }
+
+        @media (max-width: 1200px) {
+            .quantum-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quantum-container">
+        <div class="panel left-panel">
+            <h2>Quantum Controls</h2>
+            <div class="state-display" id="stateDisplay">|ψ⟩ = |0⟩</div>
+            <div id="gateControls"></div>
+            <div class="measurement-result" id="measurementResult"></div>
+            <div class="equation-box">
+                <div class="equation-title">Final Quantum State Equation:</div>
+                <div class="equation-content" id="equationContent"></div>
+            </div>
+        </div>
+
+        <div class="main-view">
+            <canvas id="blochSphere" width="500" height="500"></canvas>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="history-header">
+                <h2>Operation History</h2>
+                <button class="history-clear-btn" id="clearHistory">Clear History</button>
+            </div>
+            <div class="stats-container" id="statsContainer">
+                <div class="stats-item">
+                    <span>Total Operations:</span>
+                    <span id="totalOps">0</span>
+                </div>
+                <div class="stats-item">
+                    <span>Measurements:</span>
+                    <span id="totalMeasurements">0</span>
+                </div>
+                <div class="stats-item">
+                    <span>|0⟩ Results:</span>
+                    <span id="zeroResults">0</span>
+                </div>
+                <div class="stats-item">
+                    <span>|1⟩ Results:</span>
+                    <span id="oneResults">0</span>
+                </div>
+                <div class="stats-item">
+                    <span>Success Rate:</span>
+                    <span id="successRate">0%</span>
+                </div>
+            </div>
+            <div class="history-log" id="historyLog"></div>
+        </div>
+    </div>
+
+<script>
+// Complex number handling
+class Complex {
+    constructor(real, imag) {
+        this.real = real;
+        this.imag = imag;
+    }
+
+    static add(a, b) {
+        return new Complex(a.real + b.real, a.imag + b.imag);
+    }
+
+    static multiply(a, b) {
+        return new Complex(
+            a.real * b.real - a.imag * b.imag,
+            a.real * b.imag + a.imag * b.real
+        );
+    }
+
+    magnitude() {
+        return Math.sqrt(this.real * this.real + this.imag * this.imag);
+    }
+
+    toString() {
+        if (Math.abs(this.imag) < 1e-10) return this.real.toFixed(3);
+        if (Math.abs(this.real) < 1e-10) return `${this.imag.toFixed(3)}i`;
+        return `${this.real.toFixed(3)}${this.imag >= 0 ? '+' : ''}${this.imag.toFixed(3)}i`;
+    }
+}
+
+// History management
+class QuantumHistory {
+    constructor(maxEntries = 100) {
+        this.maxEntries = maxEntries;
+        this.entries = [];
+        this.logElement = document.getElementById('historyLog');
+        this.setupClearButton();
+    }
+
+    setupClearButton() {
+        document.getElementById('clearHistory').addEventListener('click', () => {
+            this.clear();
+        });
+    }
+
+    addEntry(type, data) {
+        const entry = {
+            timestamp: new Date(),
+            type: type,
+            data: data,
+            id: Date.now()
+        };
+
+        this.entries.unshift(entry);
+        if (this.entries.length > this.maxEntries) {
+            this.entries.pop();
+        }
+
+        this.renderEntry(entry);
+    }
+
+    renderEntry(entry) {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.id = `log-${entry.id}`;
+
+        const time = document.createElement('span');
+        time.className = 'log-time';
+        time.textContent = entry.timestamp.toLocaleTimeString();
+
+        const operation = document.createElement('span');
+        operation.className = 'log-operation';
+
+        const result = document.createElement('span');
+        result.className = 'log-result';
+
+        switch(entry.type) {
+            case 'gate':
+                operation.textContent = `Applied ${entry.data.gate}`;
+                result.textContent = entry.data.state;
+                break;
+            case 'measurement':
+                operation.textContent = 'Measurement';
+                result.textContent = `|${entry.data.result}⟩ (p=${entry.data.probability.toFixed(3)})`;
+                break;
+            case 'reset':
+                operation.textContent = 'Reset';
+                result.textContent = '|0⟩';
+                break;
+        }
+
+        div.appendChild(time);
+        div.appendChild(operation);
+        div.appendChild(result);
+
+        if (this.logElement.firstChild) {
+            this.logElement.insertBefore(div, this.logElement.firstChild);
+        } else {
+            this.logElement.appendChild(div);
+        }
+
+        while (this.logElement.children.length > this.maxEntries) {
+            this.logElement.removeChild(this.logElement.lastChild);
+        }
+    }
+
+    clear() {
+        this.entries = [];
+        this.logElement.innerHTML = '';
+    }
+}
+
+// Main Quantum Simulator
+class QuantumSimulator {
+    constructor() {
+        this.state = {
+            alpha: new Complex(1, 0),
+            beta: new Complex(0, 0)
+        };
+        this.history = new QuantumHistory();
+        this.statistics = {
+            operations: 0,
+            measurements: 0,
+            results: { 0: 0, 1: 0 }
+        };
+        this.equationSteps = ['Initial: |ψ⟩ = |0⟩'];
+        
+        this.setupCanvas();
+        this.setupControls();
+        this.updateDisplay();
+    }
+
+    setupCanvas() {
+        this.canvas = document.getElementById('blochSphere');
+        this.ctx = this.canvas.getContext('2d');
+        this.drawBlochSphere();
+    }
+
+    setupControls() {
+        const gates = ['H', 'X', 'Z', 'Y', 'S', 'T'];
+        const controls = document.getElementById('gateControls');
+        
+        gates.forEach(gate => {
+            const btn = document.createElement('button');
+            btn.className = 'quantum-btn';
+            btn.textContent = gate;
+            btn.onclick = () => this.applyGate(gate);
+            controls.appendChild(btn);
+        });
+
+        const measureBtn = document.createElement('button');
+        measureBtn.className = 'quantum-btn';
+        measureBtn.textContent = 'Measure';
+        measureBtn.onclick = () => this.measure();
+        controls.appendChild(measureBtn);
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'quantum-btn';
+        resetBtn.textContent = 'Reset';
+        resetBtn.onclick = () => this.reset();
+        controls.appendChild(resetBtn);
+    }
+
+    applyGate(gate) {
+        const inv_sqrt2 = 1 / Math.sqrt(2);
+        const oldState = {
+            alpha: new Complex(this.state.alpha.real, this.state.alpha.imag),
+            beta: new Complex(this.state.beta.real, this.state.beta.imag)
+        };
+
+        switch(gate) {
+            case 'H':
+                this.state.alpha = Complex.add(
+                    Complex.multiply(oldState.alpha, new Complex(inv_sqrt2, 0)),
+                    Complex.multiply(oldState.beta, new Complex(inv_sqrt2, 0))
+                );
+                this.state.beta = Complex.add(
+                    Complex.multiply(oldState.alpha, new Complex(inv_sqrt2, 0)),
+                    Complex.multiply(oldState.beta, new Complex(-inv_sqrt2, 0))
+                );
+                break;
+            case 'X':
+                [this.state.alpha, this.state.beta] = [oldState.beta, oldState.alpha];
+                break;
+            case 'Z':
+                this.state.beta = new Complex(-oldState.beta.real, -oldState.beta.imag);
+                break;
+            case 'Y':
+                this.state.alpha = new Complex(-oldState.beta.imag, oldState.beta.real);
+                this.state.beta = new Complex(oldState.alpha.imag, -oldState.alpha.real);
+                break;
+            case 'S':
+                this.state.beta = new Complex(-oldState.beta.imag, oldState.beta.real);
+                break;
+            case 'T':
+                const phase = Math.PI / 4;
+                this.state.beta = Complex.multiply(oldState.beta, 
+                    new Complex(Math.cos(phase), Math.sin(phase)));
+                break;
+        }
+
+        this.statistics.operations++;
+        this.updateDisplay();
+        this.history.addEntry('gate', {
+            gate: gate,
+            state: this.getStateString()
+        });
+        this.updateEquationDisplay('gate', gate);
+        this.drawBlochSphere();
+        this.updateStats();
+    }
+
+    measure() {
+        const prob0 = this.state.alpha.magnitude() ** 2;
+        const result = Math.random() < prob0 ? 0 : 1;
+        
+        this.state = {
+            alpha: new Complex(result === 0 ? 1 : 0, 0),
+            beta: new Complex(result === 1 ? 1 : 0, 0)
+        };
+
+        this.statistics.measurements++;
+        this.statistics.results[result]++;
+        
+        const measurementResult = document.getElementById('measurementResult');
+        measurementResult.textContent = `Measured: |${result}⟩`;
+        measurementResult.classList.add('pulse');
+        setTimeout(() => measurementResult.classList.remove('pulse'), 500);
+
+        this.history.addEntry('measurement', {
+            result: result,
+            probability: prob0
+        });
+        
+        this.updateDisplay();
+        this.updateEquationDisplay('measurement');
+        this.drawBlochSphere();
+        this.updateStats();
+        
+        return result;
+    }
+
+    reset() {
+        this.state = {
+            alpha: new Complex(1, 0),
+            beta: new Complex(0, 0)
+        };
+        document.getElementById('measurementResult').textContent = '';
+        this.statistics = {
+            operations: 0,
+            measurements: 0,
+            results: { 0: 0, 1: 0 }
+        };
+        this.equationSteps = ['Initial: |ψ⟩ = |0⟩'];
+        this.history.addEntry('reset', {});
+        this.updateDisplay();
+        this.updateEquationDisplay('reset');
+        this.drawBlochSphere();
+        this.updateStats();
+    }
+
+    getStateString() {
+        return `${this.state.alpha}|0⟩ + ${this.state.beta}|1⟩`;
+    }
+
+    updateDisplay() {
+        document.getElementById('stateDisplay').innerHTML = 
+            `|ψ⟩ = ${this.getStateString()}`;
+    }
+
+    updateStats() {
+        document.getElementById('totalOps').textContent = this.statistics.operations;
+        document.getElementById('totalMeasurements').textContent = this.statistics.measurements;
+        document.getElementById('zeroResults').textContent = this.statistics.results[0];
+        document.getElementById('oneResults').textContent = this.statistics.results[1];
+        
+        const successRate = this.statistics.measurements > 0 ?
+            (this.statistics.results[0] / this.statistics.measurements * 100).toFixed(2) : 0;
+        document.getElementById('successRate').textContent = `${successRate}%`;
+    }
+
+    updateEquationDisplay(type, gate = '') {
+        const equationContent = document.getElementById('equationContent');
+        
+        switch(type) {
+            case 'gate':
+                this.equationSteps.push(`Applied ${gate}: |ψ⟩ = ${this.getStateString()}`);
+                break;
+            case 'measurement':
+                this.equationSteps.push(`Measured: |ψ⟩ = ${this.getStateString()}`);
+                break;
+            case 'reset':
+                this.equationSteps = ['Initial: |ψ⟩ = |0⟩'];
+                break;
+        }
+
+        equationContent.innerHTML = this.equationSteps
+            .slice(-3)
+            .map((step, index) => 
+                `<div class="equation-step" style="animation-delay: ${index * 0.1}s">
+                    ${step}
+                </div>`
+            )
+            .join('');
+    }
+
+    drawBlochSphere() {
+        const ctx = this.ctx;
+        const center = { x: 250, y: 250 };
+        const radius = 200;
+
+        ctx.clearRect(0, 0, 500, 500);
+
+        // Draw sphere
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#00fff2';
+        ctx.stroke();
+
+        // Calculate coordinates
+        const theta = 2 * Math.acos(this.state.alpha.magnitude());
+        const phi = Math.atan2(this.state.beta.imag, this.state.beta.real);
+
+        const x = radius * Math.sin(theta) * Math.cos(phi);
+        const y = radius * Math.sin(theta) * Math.sin(phi);
+        const z = radius * Math.cos(theta);
+
+        // Draw state vector
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(center.x + x, center.y - z);
+        ctx.strokeStyle = '#ff00ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.lineWidth = 1;
+
+        // Draw axes labels
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#00fff2';
+        ctx.textAlign = 'center';
+        ctx.fillText('|0⟩', center.x, center.y - radius - 20);
+        ctx.fillText('|1⟩', center.x, center.y + radius + 20);
+        ctx.fillText('+', center.x + radius + 20, center.y);
+        ctx.fillText('-', center.x - radius - 20, center.y);
+    }
+}
+
+// Initialize simulator when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    window.simulator = new QuantumSimulator();
+});
+</script>
+</body>
+</html>
